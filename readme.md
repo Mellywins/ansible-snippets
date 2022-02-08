@@ -23,7 +23,7 @@ then logout from the user and log back in so the changes take effects.
 ## How to make this central monitoring open for extension?
 It's relatively easy to integrate new servers to this monitoring tool.
 It can be reduced to these 3 steps
-1. Install a data exporter on the server. Depending on your needs, you can cheese from a multiple of OSS exporters( node-exporter, cAdvisor...)
+1. Install a data exporter on the server. Depending on your needs, you can choose from a multiple of OSS exporters( node-exporter, cAdvisor...)
 Here is an example compose file for a node-exporter that you can easily run on your server
 ```YAML
 services:
