@@ -2,7 +2,7 @@
 
 ## Steps to manage it
 1. Install docker and docker compose to the latest versions.
-2. Copy the Docker-compose in your workdir
+2. Copy the Docker-compose in your workdir.
 3. Add Docker to sudoers using these commands:
 ```bash
 sudo groupadd docker
