@@ -1,0 +1,56 @@
+version: "3.7"
+services:
+  portainer:
+    image: portainer/portainer-ce:latest
+    container_name: portainer
+    restart: unless-stopped
+    networks:
+      - portainer-network
+    security_opt:
+      - no-new-privileges:true
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - portainer-data:/data
+    ports:
+      - 9000:9000
+      ## Prometheus Section
+  prometheus:
+    image: prom/prometheus:latest
+    command: --config.file=/etc/prometheus/prometheus.yml
+    restart: unless-stopped
+    ports:
+      - 9090:9090
+    networks:
+      - portainer-network
+    container_name: prometheus
+    volumes:
+    - ./config/prometheus:/etc/prometheus
+      ## --------- Grafana section ----------- ##
+  grafana:
+    image: grafana/grafana-oss:latest
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - portainer-network
+    ## ----------- Node Exporter section -------- ##
+  node_exporter:
+    image: quay.io/prometheus/node-exporter:latest
+    container_name: node_exporter
+    command:
+      - '--path.rootfs=/host'
+    pid: host
+    restart: unless-stopped
+    volumes:
+      - '/:/host:ro,rslave'
+    networks:
+      - portainer-network
+volumes:
+  portainer-data:
+  grafana-data:
+networks:
+  portainer-network:
