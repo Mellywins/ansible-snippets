@@ -1,0 +1,27 @@
+- hosts: central_monitoring_servers
+  become: true
+
+  tasks:
+    - name: Install aptitude using apt
+      apt: name=aptitude state=latest update_cache=yes force_apt_get=yes
+
+    - name: Install required system packages
+      apt: name={{ item }} state=latest update_cache=yes
+      loop: ['ca-certificates','curl','gnupg','lsb-release','python3-pip','python3' ]
+    - name: Install Docker python module
+      pip:
+        name: docker
+
+    - name: Add Docker GPG apt Key
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add Docker Repository
+      apt_repository:
+        repo: deb https://download.docker.com/linux/ubuntu bionic stable
+        state: present
+
+    - name: Update apt and install docker-ce
+      apt: update_cache=yes name={{ item }} state=latest
+      loop: ['docker-ce','docker-ce-cli','containerd.io' ]                                      
