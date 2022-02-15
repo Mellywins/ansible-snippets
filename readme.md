@@ -1,53 +1,58 @@
-# Portainer environment
-
-## Steps to manage it
-1. Install docker and docker compose to the latest versions.
-2. Copy the Docker-compose in your workdir.
-3. Add Docker to sudoers using these commands:
-```bash
-sudo groupadd docker
-sudo usermod -aG docker $USER
+# File structure
 ```
-then logout from the user and log back in so the changes take effects.
-
-3. run `docker-compose up`
-
-## Deployed containers:
-* Portainer
-* Grafana
-* Prometheus
-* Node-exporter (Exports data about the host system: CPU, RAM, DISK, IO consumptions....)
-* Nginx Reverse Proxy.
-
-
-## How to make this central monitoring open for extension?
-It's relatively easy to integrate new servers to this monitoring tool.
-It can be reduced to these 3 steps
-1. Install a data exporter on the server. Depending on your needs, you can choose from a multiple of OSS exporters( node-exporter, cAdvisor...)
-Here is an example compose file for a node-exporter that you can easily run on your server
-```YAML
-services:
-  node_exporter:
-    image: quay.io/prometheus/node-exporter:latest
-    container_name: node_exporter
-    command:
-      - '--path.rootfs=/host'
-    pid: host
-    restart: unless-stopped
-    volumes:
-      - '/:/host:ro,rslave'
-    networks:
-      - portainer-network
-
-networks:
-    portainer-network
+├── cAdvisor.yml // Containers data exporter playbook
+├── config
+│   └── prometheus
+│       └── prometheus.yml // prometheus config file that will hold scrape information
+├── docker-install.yml // Making sure that Docker exists on the host
+├── grafana-prometheus-install.yml // Dashboard+DB installation playbook
+├── inventory // Holds info about the server and ssh connection
+├── node-exporter.yml // System data exporter playbook
+├── readme.md
+├── update-prometheus-config.yml // reload prometheus config when
+└── vars
+    └── default.yml 
 ```
-2. Make that exporter reachable. If you are using a reverse proxy to handle inbound traffic, Make a rewrite rule that points to the exporter container. 
-> Note that it's a security best practice to not expose this exporter's port to the public, but make it reachable from a reverse proxy. Because it can output some exploitable information about your system spec.
-3. Change prometheus' config file [prometheus.yml](./config/prometheus/prometheus.yml). Under the scrape_configs, add a new scrape job by assigning it a name, then the target url in the form of `host:port` or omit the port if you're routing to the exporter with a reverse proxy.
-Here is an example
-```YAML
-  - job_name: 'Scrape from Node Exporter'
-    static_configs:
-      - targets: ['node_exporter:9090']
-```
+# Deployment
+This guide will tell you how to deploy this tool to a server with ease, using Ansible.
+
+Follow these steps:
+
+0. clone this repository and `cd monitoring-containers`. Make sure you have ansible installed. You can find the steps in this documentation [link](https://docs.ansible.com/ansible/latest/installation_guide/intro_installation.html#installing-ansible-on-ubuntu).
+
+1. Add the server informations in the inventory file. It should look something like this: 
+    ```
+    [central_monitoring_servers]
+    127.0.0.1 ansible_port=2222 ansible_user=vagrant ansible_ssh_private_key_file=path_to_key
+    ```
+    > `ansible_port` is the server's ssh port
+
+    if you use a password, replace `ansible_ssh_private_key_file` with `ansible_password` and write the password.
+
+2. Under `vars/default.yml` put the path to the prometheus config file `prometheus.yml`. You can find it in this repo under `monitoring-containers/config`. Feel free to edit this as you see fit.
+
+3.  Check that ansible can be connected to the server by running the following:
+    ```
+    ansible -i inventory -m ping central_monitoring_servers
+    ```
+4.  Run the playbook `docker-install.yml` (implicit assumption that the server is ubuntu) to install docker if it doesn't exist with this command:
+    ```
+    ansible-playbook -i inventory docker-install.yml
+    ```
+5. Run the playbook `grafana-prometheus-install.yml` to install the grafana dashboard and prometheus database on the server using this command:
+    ```
+    ansible-playbook -i inventory grafana-prometheus-install.yml
+
+    ```
+6. Now we can start deploying exporters to the servers we want to watch. We can start by monitoring the same server we deployed the tools on by running:
+    ```
+    ansible-playbook -i inventory node-exporter.yml
+    ```
+7. If you want to visualize data about running containers on a Node. You can install cAdvisor and add it to the prometheus config. Run:
+    ```
+        ansible-playbook -i inventory cAdvisor.yml
+    ```
+    * Add the config in `prometheus.yml`  then reload prometheus by running the update-prometheus-config.yml playbook with this command:
+        ```
+        ansible-playbook -i inventory update-prometheus-config.yml
+        ```
