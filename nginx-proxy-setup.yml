@@ -1,0 +1,26 @@
+- hosts: central_monitoring_servers
+  become: true
+  tasks:
+    - name: Ensure Nginx config directory exists
+      file: path=/etc/nginx state=directory
+    - name: Copy Nginx config file on the remote Host.
+      copy:
+        src: nginx/nginx.conf
+        dest: /etc/nginx/
+
+    - name: Run Nginx Proxy container
+      community.docker.docker_container:
+        name: nginx
+        image: nginx:stable
+        state: started
+        restart: yes
+        ports:
+          - "80:80"
+          - "443:443"
+        restart_policy: always
+        volumes:
+          - /etc/nginx/nginx.conf:/etc/nginx/nginx.conf
+        networks:
+          - name: monitoring_net
+
+    

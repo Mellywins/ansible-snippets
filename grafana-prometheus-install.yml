@@ -22,8 +22,6 @@
         image: prom/prometheus:latest
         command: --config.file=/etc/prometheus/prometheus.yml --web.enable-lifecycle
         state: started
-        ports:
-          - "9090:9090"
         volumes:
           - /var/prometheus:/etc/prometheus
           - prometheus-data:/prometheus
@@ -36,8 +34,6 @@
         name: grafana
         image: grafana/grafana-oss:latest
         state: started
-        ports:
-          - "3000:3000"
         volumes:
           - grafana-data:/var/lib/grafana
         restart_policy: unless-stopped
